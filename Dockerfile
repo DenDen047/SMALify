@@ -1,29 +1,41 @@
-FROM pytorch/pytorch:2.0.0-cuda11.7-cudnn8-runtime
+FROM nvidia/cuda:11.8.0-devel-ubuntu20.04
 
+# set bash as current shell
+RUN chsh -s /bin/bash
+SHELL ["/bin/bash", "-c"]
+ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get upgrade -y
-RUN pip install --upgrade pip
-RUN pip install --upgrade setuptools
+# install anaconda
+RUN apt-get update
+RUN apt-get install -y wget libgl1-mesa-glx libegl1-mesa libxrandr2 libxrandr2 libxss1 libxcursor1 libxcomposite1 libasound2 libxi6 libxtst6 && \
+    apt-get clean
+RUN wget --quiet https://repo.anaconda.com/archive/Anaconda3-2023.03-1-Linux-x86_64.sh -O ~/anaconda.sh && \
+    /bin/bash ~/anaconda.sh -b -p /opt/conda && \
+    rm ~/anaconda.sh && \
+    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
+    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
+    find /opt/conda/ -follow -type f -name '*.a' -delete && \
+    find /opt/conda/ -follow -type f -name '*.js.map' -delete && \
+    /opt/conda/bin/conda clean -afy
 
-# OpenCV
-RUN apt-get install -y libgl1-mesa-glx libglib2.0-0 libsm6 libxrender1 libxext6
-RUN pip install opencv-python
-RUN pip install opencv-contrib-python
+# set path to conda
+ENV PATH /opt/conda/bin:$PATH
 
-# torch
-RUN pip install torchvision
+# setup conda virtual environment
+COPY ./requirements.txt /tmp/requirements.txt
+RUN conda update -n base -c defaults conda
+RUN conda env create --name smalify -f /tmp/requirements.txt
 
-# PyTorch 3D
-WORKDIR /tmp
-RUN apt-get install -y git
-RUN git clone https://github.com/facebookresearch/pytorch3d.git
-RUN apt-get install -y build-essential
-RUN cd pytorch3d && pip install -e .
+RUN echo "conda activate smalify" >> ~/.bashrc
+ENV PATH /opt/conda/envs/smalify/bin:$PATH
+ENV CONDA_DEFAULT_ENV $smalify
+RUN conda activate smalify
 
-# pip
-RUN apt-get install -y libgcc
-COPY requirements.txt requirements.txt
-RUN pip install -r requirements.txt
+# PyTorch
+RUN conda install -y pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+RUN conda install -c fvcore -c iopath -c conda-forge fvcore iopath
+RUN conda install -c bottler nvidiacub
+RUN conda install pytorch3d -c pytorch3d
 
 # clearn
 RUN rm -rf /var/lib/apt/lists/*
