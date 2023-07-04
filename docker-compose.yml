@@ -1,0 +1,19 @@
+version: "3.9"
+services:
+  main:
+    build: .
+    image: denden047/smalify:latest
+    container_name: smalify
+    ipc: host
+    # user: "1002:1002"
+    volumes:
+      - ~/Projects/SMALify:/workdir:rw
+    working_dir: /workdir
+    command: /bin/bash -c "python train.py --config config.json"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 2
+              capabilities: [ gpu ]
