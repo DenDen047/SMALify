@@ -32,4 +32,6 @@ RUN /opt/anaconda3/bin/conda env create -f /root/SMALify/environment.yml
 
 # Download  BADJA videos
 
+# デフォルトの環境をsmalifyにする
+RUN echo "conda activate smalify" >> ~/.bashrc
 
