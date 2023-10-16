@@ -31,7 +31,8 @@ COPY . /root/SMALify
 RUN /opt/anaconda3/bin/conda env create -f /root/SMALify/environment.yml
 
 # Download  BADJA videos
-
+# wgetで以下のビデオがダウンロードできなかったので、手動でダウンロードして解凍し、extra_videosを/root/SMALify/data/BADJA に置く
+# https://drive.google.com/file/d/1ad1BLmzyOp_g3BfpE2yklNI-E1b8y4gy/view
 # デフォルトの環境をsmalifyにする
 RUN echo "conda activate smalify" >> ~/.bashrc
 
