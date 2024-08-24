@@ -197,8 +197,6 @@ class Stage:
         self.src_mesh = get_meshes(self.src_verts, self.faces, device=device)
         self.n_verts = self.src_verts.shape[1]
 
-
-
         self.consider_loss = lambda loss_name: self.loss_weights[
                                                    f"w_{loss_name}"] > 0  # function to check if loss is non-zero
 
@@ -264,7 +262,7 @@ class Stage:
                 self.losses_to_plot.append(loss)
 
                 tqdm_iterator.set_description(
-                    f"STAGE = {self.name}, TOT_LOSS = {loss:.6f}")  # Print the losses
+                    f"STAGE={self.name}, TOT_LOSS={loss:.6f}")  # Print the losses
 
         if plot:
             self.plot()
@@ -309,7 +307,15 @@ class StageManager:
         it_start = 0  # track number of its
         for stage in self.stages:
             n_it = stage.n_it
-            ax.semilogy(np.arange(it_start, it_start + n_it), stage.losses_to_plot, label=stage.name)
+            losses = [
+                loss.item() if isinstance(loss, torch.Tensor) else loss
+                for loss in stage.losses_to_plot
+            ]
+            ax.semilogy(
+                np.arange(it_start, it_start + n_it),
+                losses,
+                label=stage.name
+            )
             it_start += n_it
 
         ax.set_xlabel('Epoch')
@@ -318,6 +324,7 @@ class StageManager:
         out_src = os.path.join(self.out_dir, out_src + ".png")
         plt.tight_layout()
         fig.savefig(out_src)
+        print(f"Saved loss plot to {out_src}")
         plt.close(fig)
 
     def add_stage(self, stage):

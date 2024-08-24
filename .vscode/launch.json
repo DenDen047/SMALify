@@ -20,7 +20,7 @@
                 "--mesh_dir", "${workspaceFolder}/data/SMAL/big_cats/",
                 "--scheme", "default",
                 "--lr", "1e-3",
-                "--nits", "100",
+                "--nits", "10",
             ],
             "console": "integratedTerminal"
         },
