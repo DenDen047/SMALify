@@ -54,6 +54,7 @@ RUN python3 -m pip install "git+https://github.com/facebookresearch/pytorch3d.gi
 RUN apt install -y ffmpeg libsm6 libxext6
 RUN python3 -m pip install numpy==1.23.1
 RUN python3 -m pip install nibabel
+RUN python3 -m pip install chumpy
 
 # Add user. Without this, following process is executed as admin.
 RUN groupadd -g ${GID} ${GROUP_NAME} \

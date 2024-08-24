@@ -1,13 +1,15 @@
 import os
+import glob
 import torch
-
+from tqdm import tqdm
 import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from pytorch3d.io import load_obj
+from pytorch3d.io import load_obj, load_ply
 from pytorch3d.structures import Meshes
 
 from matplotlib.tri import Triangulation
+
 
 def try_mkdir(loc):
     if not os.path.isdir(loc):
@@ -16,6 +18,7 @@ def try_mkdir(loc):
 
 def try_mkdirs(locs):
     for loc in locs: try_mkdir(loc)
+
 
 def equal_3d_axes(ax, X, Y, Z, zoom=1.0):
     """Sets all axes to same lengthscale through trick found here:
@@ -201,11 +204,10 @@ def animator(ax):
 
 def save_animation(fig, func, n_frames, fmt="gif", fps=15, title="output", callback=True, **kwargs):
     """Save matplotlib animation."""
-
     arap_utils.save_animation(fig, func, n_frames, fmt=fmt, fps=fps, title=title, callback=callback, **kwargs )
 
 
-def load_meshes(mesh_dir: str, sorting = lambda arr: arr, n_meshes=None, frame_step=1, device="cuda:0"):
+def load_meshes(mesh_dir: str, sorting=lambda arr: arr, n_meshes=None, frame_step=1, device="cuda:0"):
     """Given a dir of .obj files of Unity meshes, loads all and returns mesh names, and meshes as Mesh object.
 
     :param mesh_dir: Location of directory of .obj files
@@ -222,25 +224,33 @@ def load_meshes(mesh_dir: str, sorting = lambda arr: arr, n_meshes=None, frame_s
     mesh_names = []
     all_verts, all_faces_idx = [], []
 
-    file_list = [f for f in os.listdir(mesh_dir) if ".obj" in f]
+    mesh_dir = os.path.abspath(mesh_dir)
+    obj_paths = glob.glob(os.path.join(mesh_dir, '*.obj')) + glob.glob(os.path.join(mesh_dir, '*.ply'))
 
-    obj_list = sorting(file_list)[::frame_step] # get sorted list of obj files, applyinfg frame step
-    if n_meshes is not None: obj_list = obj_list[:n_meshes]
+    obj_paths = sorting(obj_paths)[::frame_step]  # get sorted list of obj files, applying frame step
+    if n_meshes is not None:
+        obj_paths = obj_paths[:n_meshes]
 
+    for obj_path in tqdm(obj_paths, desc='Loading meshes'):
+        mesh_names.append(os.path.basename(obj_path)[:-4])    # Get name of mesh
+        if ".obj" in obj_path:
+            # Load mesh with no textures
+            verts, faces, aux = load_obj(obj_path, load_textures=False)
+            # faces is an object which contains the following LongTensors: verts_idx, normals_idx and textures_idx
+            faces_idx = faces.verts_idx.to(device)
+        elif ".ply" in obj_path:
+            verts, faces = load_ply(obj_path)
+            faces_idx = faces.to(device)
+        else:
+            raise ValueError(f"Unsupported file format: {obj_path}. Only .obj and .ply files are supported.")
 
-    for obj_file in obj_list:
-        mesh_names.append(obj_file[:-4]) # Get name of mesh
-        target_obj = os.path.join(mesh_dir, obj_file)
-        verts, faces, aux = load_obj(target_obj, load_textures=False) # Load mesh with no textures
-        faces_idx = faces.verts_idx.to \
-            (device) # faces is an object which contains the following LongTensors: verts_idx, normals_idx and textures_idx
         verts = verts.to(device) # verts is a FloatTensor of shape (V, 3) where V is the number of vertices in the mesh
 
         # Center and scale for normalisation purposes
         centre = verts.mean(0)
         verts = verts - centre
         scale = max(verts.abs().max(0)[0])
-        verts = verts /scale
+        verts = verts / scale
 
         # ROTATE TARGET MESH TO GET IN DESIRED DIRECTION - UNCOMMENT IF USING
         # R1 = cartesian_rotation("z", np.pi/2).to(device)

@@ -5,10 +5,23 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Run Fitter",
+            "name": "Python: Run SMAL-Fitter",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/smal_fitter/optimize_to_joints.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: Run 3D Fitter",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/fitter_3d/optimise.py",
+            "args": [
+                "--mesh_dir", "${workspaceFolder}/data/SMAL/big_cats/",
+                "--scheme", "default",
+                "--lr", "1e-3",
+                "--nits", "100",
+            ],
             "console": "integratedTerminal"
         },
         {
