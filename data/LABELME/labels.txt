@@ -14,10 +14,10 @@ Tail start
 Tail end
 Base of left ear
 Base of right ear
-Nose	
+Nose
 Chin
-Left ear tip	
-Right ear tip	
+Left ear tip
+Right ear tip
 Left eye
 Right eye
 Withers

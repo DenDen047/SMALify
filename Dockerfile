@@ -1,38 +1,70 @@
-FROM nvidia/opengl:base-ubuntu18.04
+ARG BASE_IMAGE=ubuntu:20.04
+FROM ${BASE_IMAGE}
 
-# 必要なパッケージのインストール
-RUN apt-get update && \
-    apt-get -y upgrade && \
-    apt-get install -y libgl1-mesa-glx libegl1-mesa libxrandr2 libxrandr2 libxss1 libxcursor1 libxcomposite1 libasound2 libxi6 libxtst6 wget  git
+ARG PROJECT_NAME=project
+ARG USER_NAME=challenger
+ARG GROUP_NAME=challengers
+ARG UID=1000
+ARG GID=1000
+ARG PYTHON_VERSION=3.8
+ARG APPLICATION_DIRECTORY=/home/${USER_NAME}/${PROJECT_NAME}
+ARG RUN_POETRY_INSTALL_AT_BUILD_TIME="false"
+ARG FORCE_CUDA=0
+ARG TORCH_CUDA_ARCH_LIST=7.5
 
-# CUDA 10.1のインストール
-RUN wget https://developer.nvidia.com/compute/cuda/10.1/Prod/local_installers/cuda-repo-ubuntu1804-10-1-local-10.1.105-418.39_1.0-1_amd64.deb
-RUN dpkg -i cuda-repo-ubuntu1804-10-1-local-10.1.105-418.39_1.0-1_amd64.deb
-RUN apt-get install -y gnupg
-RUN apt-key add /var/cuda-repo-10-1-local-10.1.105-418.39/7fa2af80.pub
-RUN apt-get update
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get install -y cuda
-# 環境変数の設定
-ENV PATH /usr/local/nvidia/bin:/usr/local/cuda/bin:${PATH}
-ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64
+ENV DEBIAN_FRONTEND="noninteractive" \
+    LC_ALL="C.UTF-8" \
+    LANG="C.UTF-8" \
+    PYTHONPATH=${APPLICATION_DIRECTORY}
+ENV FORCE_CUDA=${FORCE_CUDA}
 
-# Anacondaのインストール
-RUN wget -P /opt https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_64.sh && \
-    bash /opt/Anaconda3-2020.02-Linux-x86_64.sh -b -p /opt/anaconda3 && \
-    rm /opt/Anaconda3-2020.02-Linux-x86_64.sh
-RUN echo "export PATH=/opt/anaconda3/bin:$PATH" >> ~/.bashrc && \
-    . ~/.bashrc
-RUN /opt/anaconda3/bin/conda init
+# Following is needed to install python 3.7
+RUN apt update && apt install --no-install-recommends -y software-properties-common
+RUN add-apt-repository ppa:deadsnakes/ppa -y
 
+RUN apt update && apt install --no-install-recommends -y \
+    git curl make ssh openssh-client \
+    python${PYTHON_VERSION} python${PYTHON_VERSION}-dev python${PYTHON_VERSION}-distutils python3-pip python-is-python3
 
-WORKDIR /root
-COPY . /root/SMALify
-RUN /opt/anaconda3/bin/conda env create -f /root/SMALify/environment.yml
+# Following is needed to swtich default python3 version
+# For detail, please check following link https://unix.stackexchange.com/questions/410579/change-the-python3-default-version-in-ubuntu
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_VERSION} 1 \
+    && update-alternatives --set python3 /usr/bin/python${PYTHON_VERSION}
+# `requests` needs to be upgraded to avoid RequestsDependencyWarning
+# ref: https://stackoverflow.com/questions/56155627/requestsdependencywarning-urllib3-1-25-2-or-chardet-3-0-4-doesnt-match-a-s
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python${PYTHON_VERSION}
+RUN python3 -m pip install --upgrade pip setuptools requests
 
-# Download  BADJA videos
-# wgetで以下のビデオがダウンロードできなかったので、手動でダウンロードして解凍し、extra_videosを/root/SMALify/data/BADJA に置く
-# https://drive.google.com/file/d/1ad1BLmzyOp_g3BfpE2yklNI-E1b8y4gy/view
-# デフォルトの環境をsmalifyにする
-RUN echo "conda activate smalify" >> ~/.bashrc
+# basic libs
+RUN apt install -y build-essential
+RUN python3 -m pip install -U pip
+RUN python3 -m pip install scikit-image matplotlib imageio plotly opencv-python
+RUN python3 -m pip install tqdm
 
+# PyTorch and PyTorch3D
+RUN apt install -y build-essential
+RUN python3 -m pip install scikit-image matplotlib imageio plotly opencv-python
+RUN python3 -m pip install torch==1.13.0 torchvision==0.14.0
+RUN python3 -m pip install fvcore iopath
+# TORCH_CUDA_ARCH_LIST needs to be defined (ref: https://github.com/pytorch/extension-cpp/issues/71)
+ENV TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST}"
+RUN python3 -m pip install "git+https://github.com/facebookresearch/pytorch3d.git@stable"
+
+# other packages
+RUN apt install -y ffmpeg libsm6 libxext6
+RUN python3 -m pip install numpy==1.23.1
+RUN python3 -m pip install nibabel
+RUN python3 -m pip install chumpy
+
+# Add user. Without this, following process is executed as admin.
+RUN groupadd -g ${GID} ${GROUP_NAME} \
+    && useradd -ms /bin/sh -u ${UID} -g ${GID} ${USER_NAME}
+
+USER ${USER_NAME}
+WORKDIR ${APPLICATION_DIRECTORY}
+
+# # If ${RUN_POETRY_INSTALL_AT_BUILD_TIME} = "true", install Python package by Poetry and move .venv under ${HOME}.
+# # This process is for CI (GitHub Actions). To prevent overwrite by volume of docker compose, .venv is moved under ${HOME}.
+# COPY --chown=${UID}:${GID} pyproject.toml poetry.lock poetry.toml .
+# RUN test ${RUN_POETRY_INSTALL_AT_BUILD_TIME} = "true" && poetry install || echo "skip to run poetry install."
+# RUN test ${RUN_POETRY_INSTALL_AT_BUILD_TIME} = "true" && mv ${APPLICATION_DIRECTORY}/.venv ${HOME}/.venv || echo "skip to move .venv."

@@ -15,12 +15,19 @@ The aim of this repository is to provided demonstrative fitting code to benefit 
    cd SMALify
    ```
    Note: If you don't clone with submodules you won't get the sample data from BADJA/StanfordExtra/SMALST.
-    
+
 2. Install dependencies, particularly [PyTorch (cuda support recommended)](https://pytorch.org/), [Pytorch3D](https://github.com/facebookresearch/pytorch3d). Check [requirements.txt](https://github.com/benjiebob/SMALify/blob/master/requirements.txt) for full details.
 
-3. Download [BADJA videos](https://drive.google.com/file/d/1ad1BLmzyOp_g3BfpE2yklNI-E1b8y4gy/view?usp=sharing) and unzip to `badja_extra_videos.zip`. 
+3. Download [BADJA videos](https://drive.google.com/file/d/1ad1BLmzyOp_g3BfpE2yklNI-E1b8y4gy/view?usp=sharing) and unzip to `badja_extra_videos.zip`.
 
 4. Inspect the directory paths in [config.py](https://github.com/benjiebob/SMALify/blob/master/config.py) and make sure they match your system.
+
+### Docker
+
+```bash
+docker compose up -d
+docker exec -it smalify bash
+```
 
 ## QuickStart: Running the Fitter
 
@@ -30,9 +37,9 @@ The aim of this repository is to provided demonstrative fitting code to benefit 
       ```
       python smal_fitter/optimize_to_joints.py
       ```
-   - Inspect the SMALify/checkpoint directory to inspect the progress of the fitter. 
+   - Inspect the SMALify/checkpoint directory to inspect the progress of the fitter.
       - The output files stX_epY means, stage X and iteration Y of the fitter.
-      - The final output is named st10_ep0 by (a slightly lazy) convention. 
+      - The final output is named st10_ep0 by (a slightly lazy) convention.
       - The other files have the following meaning
 
          | Extension  | Explanation |
@@ -42,9 +49,9 @@ The aim of this repository is to provided demonstrative fitting code to benefit 
          | .pkl  | Pickle file, contains the latest model/camera parameters |
 
    - Create a video with the final fits
-      - The generate_video.py function loads the exported .pkl files generated during the fitting process and exports the data. This is generally usful if your .pkl files are created using alternative methods, e.g. Who Left the Dogs Out? (coming soon!) or your own research. 
+      - The generate_video.py function loads the exported .pkl files generated during the fitting process and exports the data. This is generally usful if your .pkl files are created using alternative methods, e.g. Who Left the Dogs Out? (coming soon!) or your own research.
       - Set CHECKPOINT_NAME in [config.py](https://github.com/benjiebob/SMALify/blob/master/config.py) to be the name of the output directory in SMALify/checkpoints.
-      - By default the code will load the final optimized meshes, indicated by EPOCH_NAME = "st10_ep0". If you want to generate a video from intermediate results, set this to some different stage/iteration. 
+      - By default the code will load the final optimized meshes, indicated by EPOCH_NAME = "st10_ep0". If you want to generate a video from intermediate results, set this to some different stage/iteration.
       - Run the video generation script, which exports the video to SMALify/exported
          ```
          python smal_fitter/generate_video.py
@@ -76,10 +83,10 @@ The aim of this repository is to provided demonstrative fitting code to benefit 
    | SHAPE_FAMILY            | Choose from 0: Cat, 1: Canine (e.g. Dog), 2: Equine (e.g. Horse), 3: Bovine (e.g. Cow), 4: Hippo |  1 |
    | IMAGE_RANGE  | Number of frames to process from the sequence. Ignored for StanfordExtra.  | [1,2,3] or range(0, 10) |
    | WINDOW_SIZE  | For video sequences, the number of frames to fit into a batch. Alter depending on GPU capacity. | 10 |
-   
+
 ### Running on your own data
-The first job is to generate keypoint/silhouette data for your input image(s). I recommend using [LabelMe](https://github.com/wkentaro/labelme), which is fantastic software that makes annotating keypoints / silhouettes efficient. 
-   
+The first job is to generate keypoint/silhouette data for your input image(s). I recommend using [LabelMe](https://github.com/wkentaro/labelme), which is fantastic software that makes annotating keypoints / silhouettes efficient.
+
 - Install the software, and then load the joint annotation execute
    ```
    labelme --labels labels.txt --nosortlabels
